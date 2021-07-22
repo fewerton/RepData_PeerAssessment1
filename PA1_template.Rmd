@@ -1,17 +1,48 @@
 ---
 title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
+output: html_document
+keep_md: true
 ---
 
 
 ## Loading and preprocessing the data
 
+```{r}
+library(tidyverse)
+library(knitr)
+activity_df = read_csv(file = "activity.csv")
+
+```
 
 
 ## What is mean total number of steps taken per day?
+For this part of the assignment, you can ignore the missing values in the dataset.
 
+### Calculate the total number of steps taken per day.
+
+```{r}
+atb = activity_df %>%
+    group_by(date) %>%
+    summarise(total_steps = sum(steps)) 
+kable(atb, format = "html")
+```
+
+###  Make a histogram of the total number of steps taken each day
+```{r}
+activity_df %>%
+    group_by(date) %>%
+    summarise(total_steps = sum(steps)) %>%
+    ggplot() +
+    geom_histogram(mapping = aes(x=total_steps))
+```
+
+###  Calculate and report the mean and median of the total number of steps taken per day
+
+```{r}
+activity_df %>%
+    drop_na() %>%
+    summarise(mean = mean(steps), median = median(steps))
+```
 
 
 ## What is the average daily activity pattern?
