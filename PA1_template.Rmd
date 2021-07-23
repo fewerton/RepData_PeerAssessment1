@@ -4,14 +4,12 @@ output: html_document
 keep_md: true
 ---
 
-
 ## Loading and preprocessing the data
 
 ```{r}
 library(tidyverse)
 library(knitr)
 activity_df = read_csv(file = "activity.csv")
-
 ```
 
 
@@ -33,24 +31,121 @@ activity_df %>%
     group_by(date) %>%
     summarise(total_steps = sum(steps)) %>%
     ggplot() +
-    geom_histogram(mapping = aes(x=total_steps))
+    geom_histogram(mapping = aes(x=total_steps), bins = 40)
 ```
 
 ###  Calculate and report the mean and median of the total number of steps taken per day
 
 ```{r}
 activity_df %>%
+    group_by(date) %>%
+    summarise(total_steps = sum(steps)) %>%
     drop_na() %>%
-    summarise(mean = mean(steps), median = median(steps))
+    summarise(mean = mean(total_steps), median = median(total_steps))
 ```
 
 
 ## What is the average daily activity pattern?
 
+###  Make a time series plot of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all days (y-axis)
+```{r}
+activity_df %>%
+    drop_na() %>%
+    group_by(interval) %>%
+    summarise(mean_steps = mean(steps)) %>%
+    ggplot() +
+    geom_line(mapping = aes(x=interval, y=mean_steps), size=1)
+```
+
+###  Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps?
+```{r}
+activity_df %>%
+    drop_na() %>%
+    group_by(interval) %>%
+    summarise(mean_steps = mean(steps)) %>%
+    filter(mean_steps == max(mean_steps))
+```
+
+###  Which 5-minute interval, on average across all the days in the dataset, contains the maximum number of steps? (alternative solution)
+```{r}
+activity_df %>%
+    drop_na() %>%
+    group_by(interval) %>%
+    summarise(mean_steps = mean(steps)) %>%
+    slice_max(mean_steps) 
+```
 
 
 ## Imputing missing values
 
+Note that there are a number of days/intervals where there are missing values (coded as NA). The presence of missing days may introduce bias into some calculations or summaries of the data.
 
+### Calculate and report the total number of missing values in the dataset (i.e. the total number of rows with NA)
+```{r}
+activity_df %>%
+    filter(is.na(steps)) %>%
+    summarise(missing_values = n())
+```
+
+
+### Devise a strategy for filling in all of the missing values in the dataset. The strategy does not need to be sophisticated. For example, you could use the mean/median for that day, or the mean for that 5-minute interval, etc.
+    
+### Create a new dataset that is equal to the original dataset but with the missing data filled in.
+ 
+```{r}
+activity_df_inputed = activity_df %>%
+    group_by(interval) %>%
+    mutate(steps_inputed = replace(steps, is.na(steps), mean(steps, na.rm=TRUE)))
+head(activity_df_inputed)
+```
+
+### Make a histogram of the total number of steps taken each day and calculate and report the mean and median total number of steps taken per day. Do these values differ from the estimates from the first part of the assignment? What is the impact of imputing missing data on the estimates of the total daily number of steps?
+
+```{r}
+activity_df_inputed %>%
+    group_by(date) %>%
+    summarise(total_steps_inputed = sum(steps_inputed)) %>%
+    ggplot() +
+    geom_histogram(mapping = aes(x=total_steps_inputed), bins = 40)
+```
 
 ## Are there differences in activity patterns between weekdays and weekends?
+For this part the weekdays() function may be of some help here. Use the dataset with the filled-in missing values for this part.
+
+### Create a new factor variable in the dataset with two levels – “weekday” and “weekend” indicating whether a given date is a weekday or weekend day.
+
+```{r}
+
+activity_df_inputed %>%
+    mutate(week_day = weekdays(date)) %>%
+    mutate(week_day_category = if_else(week_day %in% c("Saturday","Sunday"), "weekend", "weekday")) %>%
+    mutate(week_day_category = as_factor(week_day_category))
+```
+
+### Make a panel plot containing a time series plot (i.e. type = "l") of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis). See the README file in the GitHub repository to see an example of what this plot should look like using simulated data.
+
+Using lines to create the time series plot
+```{r}
+activity_df_inputed %>%
+    mutate(week_day = weekdays(date)) %>%
+    mutate(week_day_category = if_else(week_day %in% c("Saturday","Sunday"), "weekend", "weekday")) %>%
+    mutate(week_day_category = as_factor(week_day_category)) %>%
+    ggplot() +
+    geom_line(mapping=aes(x=interval, y=steps_inputed)) +
+    facet_wrap(vars(week_day_category), nrow=2)
+```
+
+
+
+Using dots to create the time series plot
+
+```{r}
+activity_df_inputed %>%
+    mutate(week_day = weekdays(date)) %>%
+    mutate(week_day_category = if_else(week_day %in% c("Saturday","Sunday"), "weekend", "weekday")) %>%
+    mutate(week_day_category = as_factor(week_day_category)) %>%
+    ggplot(mapping=aes(x=interval,y=steps_inputed)) +
+    geom_jitter() +
+    facet_wrap(vars(week_day_category), nrow=2)
+```
+
